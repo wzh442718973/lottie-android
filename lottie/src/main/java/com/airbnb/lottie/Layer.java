@@ -1,15 +1,14 @@
 package com.airbnb.lottie;
 
 import android.graphics.Color;
-import android.graphics.PointF;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
-import android.util.Log;
+import android.util.JsonReader;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -33,120 +32,64 @@ class Layer implements Transform {
     Unknown
   }
 
-  static Layer fromJson(JSONObject json, LottieComposition composition) {
+  static Layer fromJson(JsonReader reader, LottieComposition composition) throws IOException {
     Layer layer = new Layer(composition);
+    layer.frameRate = composition.getFrameRate();
+
+    reader.beginObject();
+
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "nm":
+          layer.layerName = reader.nextString();
+          break;
+        case "ind":
+          layer.layerId = reader.nextLong();
+          break;
+        case "ty":
+          int layerType = reader.nextInt();
+          if (layerType <= LottieLayerType.Shape.ordinal()) {
+            layer.layerType = LottieLayerType.values()[layerType];
+          } else {
+            layer.layerType = LottieLayerType.Unknown;
+          }
+          break;
+        case "parent":
+          layer.parentId = reader.nextLong();
+          break;
+        case "ip":
+          layer.inFrame = reader.nextLong();
+          break;
+        case "op":
+          layer.outFrame = reader.nextLong();
+          break;
+        case "sw":
+          layer.solidWidth = (int) (reader.nextInt() * composition.getScale());
+          break;
+        case "sh":
+          layer.solidHeight = (int) (reader.nextInt() * composition.getScale());
+          break;
+        case "sc":
+          layer.solidColor = Color.parseColor(reader.nextString());
+          break;
+        case "ks":
+          parseTransform(reader, composition, layer);
+          break;
+        case "tt":
+          layer.matteType = MatteType.values()[reader.nextInt()];
+          break;
+        case "masksProperties":
+          parseMasks(reader, composition, layer);
+          break;
+        case "shapes":
+
+
+          // TODO (jsonreader)
+      }
+    }
+
+    reader.endObject();
     try {
-      if (L.DBG) Log.d(TAG, "Parsing new layer.");
-      layer.layerName = json.getString("nm");
-      if (L.DBG) Log.d(TAG, "\tName=" + layer.layerName);
-      layer.layerId = json.getLong("ind");
-      if (L.DBG) Log.d(TAG, "\tId=" + layer.layerId);
-      layer.frameRate = composition.getFrameRate();
-
-      int layerType = json.getInt("ty");
-      if (layerType <= LottieLayerType.Shape.ordinal()) {
-        layer.layerType = LottieLayerType.values()[layerType];
-      } else {
-        layer.layerType = LottieLayerType.Unknown;
-      }
-
-      try {
-        layer.parentId = json.getLong("parent");
-      } catch (JSONException e) {
-        // Do nothing.
-      }
-      layer.inFrame = json.getLong("ip");
-      layer.outFrame = json.getLong("op");
-      if (L.DBG) Log.d(TAG, "\tFrames=" + layer.inFrame + "->" + layer.outFrame);
-
-      if (layer.layerType == LottieLayerType.Solid) {
-        layer.solidWidth = (int) (json.getInt("sw") * composition.getScale());
-        layer.solidHeight = (int) (json.getInt("sh") * composition.getScale());
-        layer.solidColor = Color.parseColor(json.getString("sc"));
-        if (L.DBG) {
-          Log.d(TAG, "\tSolid=" + Integer.toHexString(layer.solidColor) + " " +
-              layer.solidWidth + "x" + layer.solidHeight + " " + composition.getBounds());
-        }
-      }
-
-      JSONObject ks = json.getJSONObject("ks");
-
-      JSONObject opacity = null;
-      try {
-        opacity = ks.getJSONObject("o");
-      } catch (JSONException e) {
-        // Do nothing.
-      }
-      if (opacity != null) {
-        layer.opacity = new AnimatableIntegerValue(opacity, layer.frameRate, composition, false, true);
-        if (L.DBG) Log.d(TAG, "\tOpacity=" + layer.opacity.getInitialValue());
-      }
-
-      JSONObject rotation;
-      try {
-        rotation = ks.getJSONObject("r");
-      } catch (JSONException e) {
-        rotation = ks.getJSONObject("rz");
-      }
-
-      if (rotation != null) {
-        layer.rotation = new AnimatableFloatValue(rotation, layer.frameRate, composition, false);
-        if (L.DBG) Log.d(TAG, "\tRotation=" + layer.rotation.getInitialValue());
-      }
-
-      JSONObject position = null;
-      try {
-        position = ks.getJSONObject("p");
-      } catch (JSONException e) {
-        // Do nothing.
-      }
-      if (position != null) {
-        layer.position = AnimatablePathValue.createAnimatablePathOrSplitDimensionPath(position, composition);
-        if (L.DBG) Log.d(TAG, "\tPosition=" + layer.getPosition().toString());
-      }
-
-      JSONObject anchor = null;
-      try {
-        anchor = ks.getJSONObject("a");
-      } catch (JSONException e) {
-        // DO nothing.
-      }
-      if (anchor != null) {
-        layer.anchor = new AnimatablePathValue(anchor, composition);
-        if (L.DBG) Log.d(TAG, "\tAnchor=" + layer.anchor.toString());
-      }
-
-      JSONObject scale = null;
-      try {
-        scale = ks.getJSONObject("s");
-      } catch (JSONException e) {
-        // Do nothing.
-      }
-      if (scale != null) {
-        layer.scale = new AnimatableScaleValue(scale, layer.frameRate, composition, false);
-        if (L.DBG) Log.d(TAG, "\tScale=" + layer.scale.toString());
-      }
-
-      try {
-        layer.matteType = MatteType.values()[json.getInt("tt")];
-        if (L.DBG) Log.d(TAG, "\tMatte=" + layer.matteType);
-      } catch (JSONException e) {
-        // Do nothing.
-      }
-
-      JSONArray jsonMasks = null;
-      try {
-        jsonMasks = json.getJSONArray("masksProperties");
-      } catch (JSONException e) {
-        // Do nothing.
-      }
-      if (jsonMasks != null) {
-        for (int i = 0; i < jsonMasks.length(); i++) {
-          Mask mask = new Mask(jsonMasks.getJSONObject(i), layer.frameRate, composition);
-          layer.masks.add(mask);
-          if (L.DBG) Log.d(TAG, "\tMask=" + mask.getMaskMode());
-        }
-      }
 
       JSONArray shapes = null;
       try {
@@ -156,10 +99,9 @@ class Layer implements Transform {
       }
       if (shapes != null) {
         for (int i = 0; i < shapes.length(); i++) {
-          Object shape = ShapeGroup.shapeItemWithJson(shapes.getJSONObject(i), layer.frameRate, composition);
+          Object shape = ShapeGroup.parseShapeItem(shapes.getJSONObject(i), layer.frameRate, composition);
           if (shape != null) {
             layer.shapes.add(shape);
-            if (L.DBG) Log.d(TAG, "\tShapes+=" + shape.getClass().getSimpleName());
           }
         }
       }
@@ -205,6 +147,64 @@ class Layer implements Transform {
     return layer;
   }
 
+  private static void parseTransform(JsonReader reader, LottieComposition composition, Layer layer)
+      throws IOException {
+    reader.beginObject();
+
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "o":
+          layer.opacity = new AnimatableIntegerValue(reader, composition, false, true);
+          break;
+        case "r":
+        case "rz":
+          layer.rotation = new AnimatableFloatValue(reader, composition, false);
+          break;
+        case "p":
+          layer.position =
+              AnimatablePathValue.createAnimatablePathOrSplitDimensionPath(reader, composition);
+          break;
+        case "a":
+          layer.anchor =
+              AnimatablePathValue.createAnimatablePathOrSplitDimensionPath(reader, composition);
+          break;
+        case "s":
+          layer.scale = new AnimatableScaleValue(reader, composition, false);
+          break;
+        default:
+          reader.skipValue();
+      }
+    }
+
+    reader.endObject();
+  }
+
+  private static void parseMasks(JsonReader reader, LottieComposition composition, Layer layer)
+      throws IOException{
+    reader.beginArray();
+    while (reader.hasNext()) {
+      layer.masks.add(new Mask(reader, composition));
+    }
+    reader.endArray();
+  }
+
+  private static void parseShaped(JsonReader reader, LottieComposition composition, Layer layer)
+      throws IOException {
+    reader.beginArray();
+    while (reader.hasNext()) {
+      // TODO (jsonreader)
+    }
+    reader.endArray();
+
+
+    for (int i = 0; i < shapes.length(); i++) {
+      Object shape = ShapeGroup.parseShapeItem(shapes.getJSONObject(i), layer.frameRate, composition);
+      if (shape != null) {
+        layer.shapes.add(shape);
+      }
+    }
+  }
+
   private final List<Object> shapes = new ArrayList<>();
 
   private String layerName;
@@ -225,7 +225,7 @@ class Layer implements Transform {
   private AnimatableFloatValue rotation;
   private IAnimatablePathValue position;
 
-  private AnimatablePathValue anchor;
+  private IAnimatablePathValue anchor;
   private AnimatableScaleValue scale;
 
   private boolean hasOutAnimation;
@@ -244,7 +244,7 @@ class Layer implements Transform {
     return composition.getBounds();
   }
 
-  @Override public AnimatablePathValue getAnchor() {
+  @Override public IAnimatablePathValue getAnchor() {
     return anchor;
   }
 

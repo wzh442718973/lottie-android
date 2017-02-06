@@ -1,9 +1,8 @@
 package com.airbnb.lottie;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import android.util.JsonReader;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,46 +22,79 @@ class ShapeStroke {
   private AnimatableFloatValue offset;
   private final List<AnimatableFloatValue> lineDashPattern = new ArrayList<>();
 
-  private final AnimatableColorValue color;
-  private final AnimatableIntegerValue opacity;
-  private final AnimatableFloatValue width;
-  private final LineCapType capType;
-  private final LineJoinType joinType;
+  private AnimatableColorValue color;
+  private AnimatableIntegerValue opacity;
+  private AnimatableFloatValue width;
+  private LineCapType capType;
+  private LineJoinType joinType;
 
-  ShapeStroke(JSONObject json, int frameRate, LottieComposition composition) {
-    try {
-      JSONObject colorJson = json.getJSONObject("c");
-      color = new AnimatableColorValue(colorJson, frameRate, composition);
+  ShapeStroke(JsonReader reader, LottieComposition composition) throws IOException {
+    reader.beginObject();
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "c":
+          color = new AnimatableColorValue(reader, composition);
+          break;
+        case "w":
+          width = new AnimatableFloatValue(reader, composition);
+          break;
+        case "o":
+          opacity = new AnimatableIntegerValue(reader, composition, false, true);
+          break;
+        case "lc":
+          capType = LineCapType.values()[reader.nextInt() - 1];
+          break;
+        case "lj":
+          joinType = LineJoinType.values()[reader.nextInt() - 1];
+          break;
+        case "d":
+          parseDashPattern(reader, composition);
+          break;
+        default:
+          reader.skipValue();
+      }
+    }
+    reader.endObject();
+  }
 
-      JSONObject widthJson = json.getJSONObject("w");
-      width = new AnimatableFloatValue(widthJson, frameRate, composition);
-
-      JSONObject opacityJson = json.getJSONObject("o");
-      opacity = new AnimatableIntegerValue(opacityJson, frameRate, composition, false, true);
-
-      capType = LineCapType.values()[json.getInt("lc") - 1];
-      joinType = LineJoinType.values()[json.getInt("lj") - 1];
-
-      if (json.has("d")) {
-        JSONArray dashesJson = json.getJSONArray("d");
-        for (int i = 0; i < dashesJson.length(); i++) {
-          JSONObject dashJson = dashesJson.getJSONObject(i);
-          String n = dashJson.getString("n");
-          if (n.equals("o")) {
-            JSONObject value = dashJson.getJSONObject("v");
-            offset = new AnimatableFloatValue(value, frameRate, composition);
-          } else if (n.equals("d") || n.equals("g")) {
-            JSONObject value = dashJson.getJSONObject("v");
-            lineDashPattern.add(new AnimatableFloatValue(value, frameRate, composition));
-          }
-        }
-        if (lineDashPattern.size() == 1) {
-          // If there is only 1 value then it is assumed to be equal parts on and off.
-          lineDashPattern.add(lineDashPattern.get(0));
+  private void parseDashPattern(JsonReader reader, LottieComposition composition) throws IOException {
+    reader.beginArray();
+    while (reader.hasNext()) {
+      String n = null;
+      AnimatableFloatValue value = null;
+      reader.beginObject();
+      while (reader.hasNext()) {
+        switch (reader.nextName()) {
+          case "n":
+            n = reader.nextString();
+            break;
+          case "v":
+            value = new AnimatableFloatValue(reader, composition);
+            break;
+          default:
+            reader.skipValue();
         }
       }
-    } catch (JSONException e) {
-      throw new IllegalArgumentException("Unable to parse stroke " + json, e);
+      reader.endObject();
+
+      if (n == null) {
+        throw new IllegalArgumentException("Unknown dash pattern type.");
+      }
+      if (value == null) {
+        throw new IllegalStateException("Unknown dash pattern value.");
+      }
+
+      if (n.equals("o")) {
+        offset = value;
+      } else if (n.equals("d") || n.equals("g")) {
+        lineDashPattern.add(value);
+      }
+    }
+    reader.endArray();
+
+    if (lineDashPattern.size() == 1) {
+      // If there is only 1 value then it is assumed to be equal parts on and off.
+      lineDashPattern.add(lineDashPattern.get(0));
     }
   }
 

@@ -1,23 +1,21 @@
 package com.airbnb.lottie;
 
 import android.graphics.Rect;
-import android.util.Log;
+import android.util.JsonReader;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.io.IOException;
 
 class ShapeTransform implements Transform {
-  private static final String TAG = ShapeTransform.class.getSimpleName();
 
-  private Rect compBounds;
+  private LottieComposition composition;
   private IAnimatablePathValue position;
-  private AnimatablePathValue anchor;
+  private IAnimatablePathValue anchor;
   private AnimatableScaleValue scale;
   private AnimatableFloatValue rotation;
   private AnimatableIntegerValue opacity;
 
   ShapeTransform(LottieComposition composition) {
-    this.compBounds = composition.getBounds();
+    this.composition = composition;
     this.position = new AnimatablePathValue(composition);
     this.anchor = new AnimatablePathValue(composition);
     this.scale = new AnimatableScaleValue(composition);
@@ -25,61 +23,44 @@ class ShapeTransform implements Transform {
     this.opacity = new AnimatableIntegerValue(composition, 255);
   }
 
-  ShapeTransform(JSONObject json, int frameRate, LottieComposition composition) {
-    this.compBounds = composition.getBounds();
+  ShapeTransform(JsonReader reader, LottieComposition composition) throws IOException {
+    this.composition = composition;
 
-    JSONObject jsonPosition;
-    try {
-      jsonPosition = json.getJSONObject("p");
-    } catch (JSONException e) {
-      throw new IllegalStateException("Transform has no position.");
+    reader.beginObject();
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "p":
+          position =
+              AnimatablePathValue.createAnimatablePathOrSplitDimensionPath(reader, composition);
+          break;
+        case "a":
+          anchor =
+              AnimatablePathValue.createAnimatablePathOrSplitDimensionPath(reader, composition);
+          break;
+        case "s":
+          scale = new AnimatableScaleValue(reader, composition, false);
+          break;
+        case "r":
+        case "rz":
+          rotation = new AnimatableFloatValue(reader, composition, false);
+          break;
+        case "o":
+          opacity = new AnimatableIntegerValue(reader, composition, false, true);
+
+      }
     }
-    position = AnimatablePathValue.createAnimatablePathOrSplitDimensionPath(jsonPosition, composition);
-
-    JSONObject jsonAnchor;
-    try {
-      jsonAnchor = json.getJSONObject("a");
-    } catch (JSONException e) {
-      throw new IllegalStateException("Transform has no anchor.");
-    }
-    anchor = new AnimatablePathValue(jsonAnchor, composition);
-
-    JSONObject jsonScale;
-    try {
-      jsonScale = json.getJSONObject("s");
-    } catch (JSONException e) {
-      throw new IllegalStateException("Transform has no scale.");
-    }
-    scale = new AnimatableScaleValue(jsonScale, frameRate, composition, false);
-
-    JSONObject jsonRotation;
-    try {
-      jsonRotation = json.getJSONObject("r");
-    } catch (JSONException e) {
-      throw new IllegalStateException("Transform has no rotation.");
-    }
-    rotation = new AnimatableFloatValue(jsonRotation, frameRate, composition, false);
-
-    JSONObject jsonOpacity;
-    try {
-      jsonOpacity = json.getJSONObject("o");
-    } catch (JSONException e) {
-      throw new IllegalStateException("Transform has no opacity.");
-    }
-    opacity = new AnimatableIntegerValue(jsonOpacity, frameRate, composition, false, true);
-
-    if (L.DBG) Log.d(TAG, "Parsed new shape transform " + toString());
+    reader.endObject();
   }
 
   @Override public Rect getBounds() {
-    return compBounds;
+    return composition.getBounds();
   }
 
   @Override public IAnimatablePathValue getPosition() {
     return position;
   }
 
-  @Override public AnimatablePathValue getAnchor() {
+  @Override public IAnimatablePathValue getAnchor() {
     return anchor;
   }
 
@@ -97,7 +78,6 @@ class ShapeTransform implements Transform {
 
   @Override public String toString() {
     return "ShapeTransform{" + "anchor=" + anchor.toString() +
-        ", compBounds=" + compBounds +
         ", position=" + position.toString() +
         ", scale=" + scale.toString() +
         ", rotation=" + rotation.getInitialValue() +

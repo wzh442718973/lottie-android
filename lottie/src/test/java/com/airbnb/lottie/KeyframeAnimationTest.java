@@ -34,14 +34,14 @@ public class KeyframeAnimationTest {
         }});
 
     animation.setProgress(0f);
-    assertEquals(animation.getValue(), 0f);
+    assertEquals(animation.getValue(, ), 0f);
     animation.setProgress(0.25f);
-    assertEquals(animation.getValue(), 0.5f);
+    assertEquals(animation.getValue(, ), 0.5f);
     animation.setProgress(0.5f);
-    assertEquals(animation.getValue(), 1f);
+    assertEquals(animation.getValue(, ), 1f);
     animation.setProgress(0.75f);
-    assertEquals(animation.getValue(), 5.5f);
+    assertEquals(animation.getValue(, ), 5.5f);
     animation.setProgress(1f);
-    assertEquals(animation.getValue(), 10f);
+    assertEquals(animation.getValue(, ), 10f);
   }
 }

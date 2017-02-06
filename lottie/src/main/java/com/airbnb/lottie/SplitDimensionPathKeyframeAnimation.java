@@ -1,7 +1,6 @@
 package com.airbnb.lottie;
 
 import android.graphics.PointF;
-import android.view.animation.Interpolator;
 
 import java.util.Collections;
 
@@ -12,8 +11,7 @@ class SplitDimensionPathKeyframeAnimation extends KeyframeAnimation<PointF> {
 
   SplitDimensionPathKeyframeAnimation(KeyframeAnimation<Float> xAnimation,
       KeyframeAnimation<Float> yAnimation) {
-    super(0, null, Collections.<Float>emptyList(),
-        Collections.<Interpolator>emptyList());
+    super(0, null, Collections.<Keyframe<PointF>>emptyList());
 
     this.xAnimation = xAnimation;
     this.yAnimation = yAnimation;
@@ -22,14 +20,23 @@ class SplitDimensionPathKeyframeAnimation extends KeyframeAnimation<PointF> {
   @Override void setProgress(float progress) {
     xAnimation.setProgress(progress);
     yAnimation.setProgress(progress);
-    point.set(xAnimation.getValue(), yAnimation.getValue());
+    // The keyframe and progress will be pulled directly from the x and y animations.
+    point.set(xAnimation.getValue(null, 0), yAnimation.getValue(null, 0));
     for (int i = 0; i < listeners.size(); i++) {
       listeners.get(i).onValueChanged(point);
     }
   }
 
-  @Override PointF getValue() {
-    point.set(xAnimation.getValue(), yAnimation.getValue());
+  @Override PointF getValue(Keyframe<PointF> keyframe, float keyframeProgress) {
+    int xKeyframeIndex = xAnimation.getCurrentKeyframeIndex();
+    Keyframe<Float> xKeyframe = xAnimation.keyframes.get(xKeyframeIndex);
+    float xKeyframeProgress = yAnimation.getCurrentKeyframeProgress();
+    int yKeyframeIndex = yAnimation.getCurrentKeyframeIndex();
+    Keyframe<Float> yKeyframe = yAnimation.keyframes.get(yKeyframeIndex);
+    float yKeyframeProgress = yAnimation.getCurrentKeyframeProgress();
+
+    point.set(xAnimation.getValue(xKeyframe, xKeyframeProgress),
+        yAnimation.getValue(yKeyframe, yKeyframeProgress));
     return point;
   }
 }

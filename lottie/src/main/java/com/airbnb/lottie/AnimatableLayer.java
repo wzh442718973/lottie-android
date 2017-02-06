@@ -92,7 +92,7 @@ class AnimatableLayer extends Drawable {
     if (backgroundAlpha != 0) {
       int alpha = backgroundAlpha;
       if (this.alpha != null) {
-        alpha = alpha * this.alpha.getValue() / 255;
+        alpha = alpha * this.alpha.getValue(, ) / 255;
       }
       solidBackgroundPaint.setAlpha(alpha);
       if (alpha > 0) {
@@ -132,28 +132,28 @@ class AnimatableLayer extends Drawable {
     }
     // TODO: Determine if these null checks are necessary.
     if (layer.position != null) {
-      PointF position = layer.position.getValue();
+      PointF position = layer.position.getValue(, );
       if (position.x != 0 || position.y != 0) {
         canvas.translate(position.x, position.y);
       }
     }
 
     if (layer.rotation != null) {
-      float rotation = layer.rotation.getValue();
+      float rotation = layer.rotation.getValue(, );
       if (rotation != 0f) {
         canvas.rotate(rotation);
       }
     }
 
     if (layer.transform != null) {
-      ScaleXY scale = layer.transform.getValue();
+      ScaleXY scale = layer.transform.getValue(, );
       if (scale.getScaleX() != 1f || scale.getScaleY() != 1f) {
         canvas.scale(scale.getScaleX(), scale.getScaleY());
       }
     }
 
     if (layer.anchorPoint != null) {
-      PointF anchorPoint = layer.anchorPoint.getValue();
+      PointF anchorPoint = layer.anchorPoint.getValue(, );
       if (anchorPoint.x != 0 || anchorPoint.y != 0) {
         canvas.translate(-anchorPoint.x, -anchorPoint.y);
       }
@@ -180,7 +180,7 @@ class AnimatableLayer extends Drawable {
 
   @Override
   public int getAlpha() {
-    float alpha = this.alpha == null ? 1f : (this.alpha.getValue() / 255f);
+    float alpha = this.alpha == null ? 1f : (this.alpha.getValue(, ) / 255f);
     float parentAlpha = parentLayer == null ? 1f : (parentLayer.getAlpha() / 255f);
     return (int) (alpha * parentAlpha * 255);
   }

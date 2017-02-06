@@ -1,29 +1,36 @@
 package com.airbnb.lottie;
 
+import android.util.JsonReader;
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+
 class ShapePath {
   private static final String TAG = ShapePath.class.getSimpleName();
 
-  private final String name;
-  private final int index;
+  private String name;
+  private int index;
   private AnimatableShapeValue shapePath;
 
-  ShapePath(JSONObject json, int frameRate, LottieComposition composition) {
-    try {
-      index = json.getInt("ind");
-    } catch (JSONException e) {
-      throw new IllegalArgumentException("ShapePath has no index.", e);
-    }
+  ShapePath(JsonReader reader, LottieComposition composition) throws IOException {
+    reader.beginObject();
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "ind":
+          index = reader.nextInt();
+          break;
+        case "nm":
+          name = reader.nextString();
+          break;
+        case "closed":
+          // TODO (jsonreader)
 
-    try {
-      name = json.getString("nm");
-    } catch (JSONException e) {
-      throw new IllegalArgumentException("Layer has no name.", e);
+      }
     }
+    reader.endObject();
 
     boolean closed = false;
     try {
@@ -35,7 +42,7 @@ class ShapePath {
     JSONObject shape;
     try {
       shape = json.getJSONObject("ks");
-      shapePath = new AnimatableShapeValue(shape, frameRate, composition, closed);
+      shapePath = new AnimatableShapeValue(shape, composition, closed);
     } catch (JSONException e) {
       // Ignore
     }

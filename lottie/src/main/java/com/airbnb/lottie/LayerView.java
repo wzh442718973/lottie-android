@@ -136,7 +136,7 @@ class LayerView extends AnimatableLayer {
           setVisible(progress == 1f, false);
         }
       });
-      setVisible(inOutAnimation.getValue() == 1f, false);
+      setVisible(inOutAnimation.getValue(, ) == 1f, false);
       addAnimation(inOutAnimation);
     } else {
       setVisible(true, false);
@@ -230,7 +230,7 @@ class LayerView extends AnimatableLayer {
     Bitmap mainBitmap;
     if (hasMasks()) {
       for (int i = 0; i < mask.getMasks().size(); i++) {
-        Path path = mask.getMasks().get(i).getValue();
+        Path path = mask.getMasks().get(i).getValue(, );
         //noinspection ConstantConditions
         maskCanvas.drawPath(path, maskShapePaint);
       }

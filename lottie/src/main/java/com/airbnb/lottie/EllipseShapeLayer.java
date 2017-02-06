@@ -105,8 +105,8 @@ class EllipseShapeLayer extends AnimatableLayer {
     }
 
     private void onCircleSizeChanged() {
-      float halfWidth = circleSize.getValue().x / 2f;
-      float halfHeight = circleSize.getValue().y / 2f;
+      float halfWidth = circleSize.getValue(, ).x / 2f;
+      float halfHeight = circleSize.getValue(, ).y / 2f;
       setBounds(0, 0, (int) halfWidth * 2, (int) halfHeight * 2);
 
       float cpW = halfWidth * ELLIPSE_CONTROL_POINT_PERCENTAGE;
@@ -119,7 +119,7 @@ class EllipseShapeLayer extends AnimatableLayer {
       path.cubicTo(0 - cpW, halfHeight, -halfWidth, 0 + cpH, -halfWidth, 0);
       path.cubicTo(-halfWidth, 0 - cpH, 0 - cpW, -halfHeight, 0, -halfHeight);
 
-      path.offset(circlePosition.getValue().x, circlePosition.getValue().y);
+      path.offset(circlePosition.getValue(, ).x, circlePosition.getValue(, ).y);
 
       onPathChanged();
 

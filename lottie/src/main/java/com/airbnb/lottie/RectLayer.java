@@ -173,8 +173,8 @@ class RectLayer extends AnimatableLayer {
 
     @Override
     public int getAlpha() {
-      Integer shapeAlpha = this.shapeAlpha == null ? 255 : this.shapeAlpha.getValue();
-      Integer transformAlpha = this.transformAlpha == null ? 255 : this.transformAlpha.getValue();
+      Integer shapeAlpha = this.shapeAlpha == null ? 255 : this.shapeAlpha.getValue(, );
+      Integer transformAlpha = this.transformAlpha == null ? 255 : this.transformAlpha.getValue(, );
       int layerAlpha = super.getAlpha();
       return (int) ((shapeAlpha / 255f * transformAlpha / 255f * layerAlpha / 255f) * 255);
     }
@@ -191,7 +191,7 @@ class RectLayer extends AnimatableLayer {
     }
 
     private void onColorChanged() {
-      paint.setColor(color.getValue());
+      paint.setColor(color.getValue(, ));
       invalidateSelf();
     }
 
@@ -212,7 +212,7 @@ class RectLayer extends AnimatableLayer {
     }
 
     private void onLineWidthChanged() {
-      paint.setStrokeWidth(lineWidth.getValue());
+      paint.setStrokeWidth(lineWidth.getValue(, ));
       invalidateSelf();
     }
 
@@ -249,9 +249,9 @@ class RectLayer extends AnimatableLayer {
       }
       float[] values = new float[lineDashPattern.size()];
       for (int i = 0; i < lineDashPattern.size(); i++) {
-        values[i] = lineDashPattern.get(i).getValue();
+        values[i] = lineDashPattern.get(i).getValue(, );
       }
-      paint.setPathEffect(new DashPathEffect(values, lineDashPatternOffset.getValue()));
+      paint.setPathEffect(new DashPathEffect(values, lineDashPatternOffset.getValue(, )));
       invalidateSelf();
     }
 
@@ -320,17 +320,17 @@ class RectLayer extends AnimatableLayer {
         return;
       }
       paint.setAlpha(getAlpha());
-      float halfWidth = rectSize.getValue().x / 2f;
-      float halfHeight = rectSize.getValue().y / 2f;
+      float halfWidth = rectSize.getValue(, ).x / 2f;
+      float halfHeight = rectSize.getValue(, ).y / 2f;
 
-      fillRect.set(rectPosition.getValue().x - halfWidth,
-          rectPosition.getValue().y - halfHeight,
-          rectPosition.getValue().x + halfWidth,
-          rectPosition.getValue().y + halfHeight);
-      if (rectCornerRadius.getValue() == 0) {
+      fillRect.set(rectPosition.getValue(, ).x - halfWidth,
+          rectPosition.getValue(, ).y - halfHeight,
+          rectPosition.getValue(, ).x + halfWidth,
+          rectPosition.getValue(, ).y + halfHeight);
+      if (rectCornerRadius.getValue(, ) == 0) {
         canvas.drawRect(fillRect, paint);
       } else {
-        canvas.drawRoundRect(fillRect, rectCornerRadius.getValue(), rectCornerRadius.getValue(), paint);
+        canvas.drawRoundRect(fillRect, rectCornerRadius.getValue(, ), rectCornerRadius.getValue(, ), paint);
       }
     }
   }

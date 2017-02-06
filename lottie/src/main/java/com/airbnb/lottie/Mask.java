@@ -1,48 +1,54 @@
 package com.airbnb.lottie;
 
+import android.util.JsonReader;
+
 import org.json.JSONException;
-import org.json.JSONObject;
+
+import java.io.IOException;
 
 class Mask {
   private enum MaskMode {
     MaskModeAdd,
     MaskModeSubtract,
     MaskModeIntersect,
-    MaskModeUnknown
+    MaskModeUnknown;
+
+    private static MaskMode forJsonKey(String key) {
+      switch (key) {
+        case "a":
+          return MaskMode.MaskModeAdd;
+        case "s":
+          return MaskMode.MaskModeSubtract;
+        case "i":
+          return MaskMode.MaskModeIntersect;
+        default:
+          return MaskMode.MaskModeUnknown;
+      }
+    }
   }
 
-  private final MaskMode maskMode;
-  private final AnimatableShapeValue maskPath;
+  private MaskMode maskMode;
+  private AnimatableShapeValue maskPath;
 
-  Mask(JSONObject json, int frameRate, LottieComposition composition) {
-    try {
-      boolean closed = false;
-      if (json.has("cl")) {
-        closed = json.getBoolean("cl");
-      }
-      String mode = json.getString("mode");
-      switch (mode) {
-        case "a":
-          maskMode = MaskMode.MaskModeAdd;
+  Mask(JsonReader reader, LottieComposition composition) throws IOException {
+    boolean closed = false;
+    reader.beginObject();
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "cl":
+          closed = true;
           break;
-        case "s":
-          maskMode = MaskMode.MaskModeSubtract;
+        case "mode":
+          maskMode = MaskMode.forJsonKey(reader.nextString());
           break;
-        case "i":
-          maskMode = MaskMode.MaskModeIntersect;
+        case"pt":
+          maskPath = new AnimatableShapeValue(reader, composition, closed);
           break;
         default:
-          maskMode = MaskMode.MaskModeUnknown;
+          reader.skipValue();
       }
-
-      maskPath = new AnimatableShapeValue(json.getJSONObject("pt"), frameRate, composition, closed);
-      //noinspection unused
-      AnimatableIntegerValue opacity =
-          new AnimatableIntegerValue(json.getJSONObject("o"), frameRate, composition, false, true);
-      // TODO: use this.
-    } catch (JSONException e) {
-      throw new IllegalArgumentException("Unable to parse mask. " + json, e);
     }
+    reader.endObject();
   }
 
 

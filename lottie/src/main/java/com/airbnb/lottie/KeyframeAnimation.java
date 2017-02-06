@@ -1,7 +1,6 @@
 package com.airbnb.lottie;
 
 import android.support.annotation.FloatRange;
-import android.view.animation.Interpolator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +13,9 @@ abstract class KeyframeAnimation<T> {
   final List<AnimationListener<T>> listeners = new ArrayList<>();
   private final long duration;
   private final LottieComposition composition;
-  final List<Float> keyTimes;
-
   private long startDelay;
+  final List<Keyframe<T>> keyframes;
   boolean isDiscrete = false;
-  final List<Interpolator> interpolators;
 
   float progress;
 
@@ -27,17 +24,10 @@ abstract class KeyframeAnimation<T> {
   private float cachedKeyframeIndexEnd;
   private float cachedDurationEndProgress = Float.MIN_VALUE;
 
-  KeyframeAnimation(long duration, LottieComposition composition, List<Float> keyTimes,
-      List<Interpolator> interpolators) {
+  KeyframeAnimation(long duration, LottieComposition composition, List<Keyframe<T>> keyframes) {
     this.duration = duration;
     this.composition = composition;
-    this.keyTimes = keyTimes;
-    this.interpolators = interpolators;
-    if (!interpolators.isEmpty() && interpolators.size() != (keyTimes.size() - 1)) {
-      throw new IllegalArgumentException(
-          "There must be 1 fewer interpolator than keytime " + interpolators.size() + " vs " +
-              keyTimes.size());
-    }
+    this.keyframes = keyframes;
   }
 
   void setStartDelay(long startDelay) {
@@ -70,29 +60,86 @@ abstract class KeyframeAnimation<T> {
     }
     this.progress = progress;
 
-    T value = getValue();
+    T value = getValue(keyframes.get(getCurrentKeyframeIndex()), getCurrentKeyframeProgress());
     for (int i = 0; i < listeners.size(); i++) {
       listeners.get(i).onValueChanged(value);
     }
   }
 
-  int getKeyframeIndex() {
-    int keyframeIndex = 1;
+  int getCurrentKeyframeIndex() {
+    if (keyframes.isEmpty()) {
+      return 0;
+    } else if (progress <= 0f) {
+      return 0;
+    } else if (progress >= 1f) {
+      return keyframes.size() - 1;
+    }
+
+    int keyframeIndex = 0;
     if (cachedKeyframeIndex != -1 && progress >= cachedKeyframeIndexStart &&
         progress <= cachedKeyframeIndexEnd) {
       keyframeIndex = cachedKeyframeIndex;
     } else {
-      float keyTime = keyTimes.get(1);
-      while (keyTime < progress && keyframeIndex < keyTimes.size() - 1) {
+      float startProgress = getProgressForKeyframeStart(keyframes.get(0));
+      while (startProgress < progress && keyframeIndex < keyframes.size()) {
         keyframeIndex++;
-        keyTime = keyTimes.get(keyframeIndex);
+        startProgress = getProgressForKeyframeStart(keyframes.get(keyframeIndex));
       }
       cachedKeyframeIndex = keyframeIndex;
-      cachedKeyframeIndexStart = keyTimes.get(cachedKeyframeIndex - 1);
-      cachedKeyframeIndexEnd = keyTimes.get(cachedKeyframeIndex);
+      cachedKeyframeIndexStart = startProgress;
+      cachedKeyframeIndexEnd = getProgressForKeyframeEnd(keyframes.get(keyframeIndex));
     }
 
     return keyframeIndex - 1;
+  }
+
+  /**
+   * This wil be [0, 1] unless the interpolator has overshoot in which case getValue() should be
+   * able to handle values outside of that range.
+   */
+  float getCurrentKeyframeProgress() {
+    if (progress <= 0f) {
+      return 0f;
+    } else if (progress >= 1f) {
+      return 1f;
+    }
+
+    Keyframe<T> keyframe = keyframes.get(getCurrentKeyframeIndex());
+    long durationFrames = keyframes.get(keyframes.size() - 1).startFrame -
+        keyframes.get(0).startFrame;
+    long progressFrame = (long) (keyframes.get(0).startFrame + progress * (float) durationFrames);
+
+    float percentageIntoFrame = 0;
+    if (!isDiscrete) {
+      percentageIntoFrame = (progressFrame - keyframe.startFrame) /
+          (keyframe.endFrame - keyframe.startFrame);
+      percentageIntoFrame = keyframe.timingFunction.getInterpolation(percentageIntoFrame);
+    }
+
+    return percentageIntoFrame;
+  }
+
+  @FloatRange(from = 0f, to = 1f)
+  private float getProgressForKeyframeStart(Keyframe<?> keyframe) {
+    if (keyframes.isEmpty()) {
+      return 0f;
+    }
+    return getProgressForFrame(keyframe.startFrame);
+  }
+
+  @FloatRange(from = 0f, to = 1f)
+  private float getProgressForKeyframeEnd(Keyframe<?> keyframe) {
+    if (keyframes.isEmpty()) {
+      return 0f;
+    }
+    return getProgressForFrame(keyframe.endFrame);
+  }
+
+  private float getProgressForFrame(long frame) {
+    float firstFrame = keyframes.get(0).startFrame;
+    float lastFrame = keyframes.get(keyframes.size() - 1).startFrame;
+
+    return (frame - firstFrame) / (lastFrame - firstFrame);
   }
 
   @FloatRange(from = 0f, to = 1f)
@@ -114,5 +161,9 @@ abstract class KeyframeAnimation<T> {
     return (float) duration / (float) composition.getDuration();
   }
 
-  abstract T getValue();
+  /**
+   * keyframeProgress will be [0, 1] unless the interpolator has overshoot in which case, this
+   * should be able to handle values outside of that range.
+   */
+  abstract T getValue(Keyframe<T> keyframe, float keyframeProgress);
 }

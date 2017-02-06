@@ -1,9 +1,12 @@
 package com.airbnb.lottie;
 
+import android.util.JsonReader;
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.IOException;
 
 class ShapeFill {
   private static final String TAG = ShapeFill.class.getSimpleName();
@@ -11,33 +14,24 @@ class ShapeFill {
   private AnimatableColorValue color;
   private AnimatableIntegerValue opacity;
 
-  ShapeFill(JSONObject json, int frameRate, LottieComposition composition) {
-    JSONObject jsonColor = null;
-    try {
-      jsonColor = json.getJSONObject("c");
-    } catch (JSONException e) {
-      // Do nothing.
+  ShapeFill(JsonReader reader, LottieComposition composition) throws IOException {
+    reader.beginObject();
+    while (reader.hasNext()) {
+      switch (reader.nextName()) {
+        case "c":
+          color = new AnimatableColorValue(reader, composition);
+          break;
+        case "o":
+          opacity = new AnimatableIntegerValue(reader, composition, false, true);
+          break;
+        case "fillEnabled":
+          fillEnabled = reader.nextBoolean();
+          break;
+        default:
+          reader.skipValue();
+      }
     }
-    if (jsonColor != null) {
-      color = new AnimatableColorValue(jsonColor, frameRate, composition);
-    }
-
-    JSONObject jsonOpacity = null;
-    try {
-      jsonOpacity = json.getJSONObject("o");
-    } catch (JSONException e) {
-      // Do nothing.
-    }
-    if (jsonOpacity != null) {
-      opacity = new AnimatableIntegerValue(jsonOpacity, frameRate, composition, false, true);
-    }
-
-    try {
-      fillEnabled = json.getBoolean("fillEnabled");
-    } catch (JSONException e) {
-      // Do nothing.
-    }
-    if (L.DBG) Log.d(TAG, "Parsed new shape fill " + toString());
+    reader.endObject();
   }
 
   public AnimatableColorValue getColor() {

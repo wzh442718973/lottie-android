@@ -129,7 +129,7 @@ class ShapeLayer extends AnimatableLayer {
   }
 
   private void onColorChanged() {
-    paint.setColor(color.getValue());
+    paint.setColor(color.getValue(, ));
     invalidateSelf();
   }
 
@@ -148,7 +148,7 @@ class ShapeLayer extends AnimatableLayer {
 
   void onPathChanged() {
     currentPath.reset();
-    currentPath.set(path.getValue());
+    currentPath.set(path.getValue(, ));
     currentPathStrokeStart = Float.NaN;
     currentPathStrokeEnd = Float.NaN;
     currentPathScaleX = Float.NaN;
@@ -159,23 +159,23 @@ class ShapeLayer extends AnimatableLayer {
 
   private void onPathPropertiesChanged() {
     boolean needsStrokeStart =
-        strokeStart != null && strokeStart.getValue() != currentPathStrokeStart;
-    boolean needsStrokeEnd = strokeEnd != null && strokeEnd.getValue() != currentPathStrokeEnd;
+        strokeStart != null && strokeStart.getValue(, ) != currentPathStrokeStart;
+    boolean needsStrokeEnd = strokeEnd != null && strokeEnd.getValue(, ) != currentPathStrokeEnd;
     boolean needsStrokeOffset =
-        strokeOffset != null && strokeOffset.getValue() != currentPathStrokeOffset;
-    boolean needsScaleX = scale != null && scale.getValue().getScaleX() != currentPathScaleX;
-    boolean needsScaleY = scale != null && scale.getValue().getScaleY() != currentPathScaleY;
+        strokeOffset != null && strokeOffset.getValue(, ) != currentPathStrokeOffset;
+    boolean needsScaleX = scale != null && scale.getValue(, ).getScaleX() != currentPathScaleX;
+    boolean needsScaleY = scale != null && scale.getValue(, ).getScaleY() != currentPathScaleY;
 
     if (!needsStrokeStart && !needsStrokeEnd && !needsScaleX && !needsScaleY &&
         !needsStrokeOffset) {
       return;
     }
-    currentPath.set(path.getValue());
+    currentPath.set(path.getValue(, ));
 
     if (needsScaleX || needsScaleY) {
       currentPath.computeBounds(tempRect, false);
-      currentPathScaleX = scale.getValue().getScaleX();
-      currentPathScaleY = scale.getValue().getScaleY();
+      currentPathScaleX = scale.getValue(, ).getScaleX();
+      currentPathScaleY = scale.getValue(, ).getScaleY();
       scaleMatrix
           .setScale(currentPathScaleX, currentPathScaleY, tempRect.centerX(), tempRect.centerY());
       currentPath.transform(scaleMatrix, currentPath);
@@ -184,8 +184,8 @@ class ShapeLayer extends AnimatableLayer {
     if (needsStrokeStart || needsStrokeEnd || needsStrokeOffset) {
       tempPath.set(currentPath);
       pathMeasure.setPath(tempPath, false);
-      currentPathStrokeStart = strokeStart.getValue();
-      currentPathStrokeEnd = strokeEnd.getValue();
+      currentPathStrokeStart = strokeStart.getValue(, );
+      currentPathStrokeEnd = strokeEnd.getValue(, );
       float length = pathMeasure.getLength();
       float start = length * currentPathStrokeStart / 100f;
       float end = length * currentPathStrokeEnd / 100f;
@@ -193,7 +193,7 @@ class ShapeLayer extends AnimatableLayer {
       float newEnd = Math.max(start, end);
 
       currentPath.reset();
-      currentPathStrokeOffset = strokeOffset.getValue() / 360f * length;
+      currentPathStrokeOffset = strokeOffset.getValue(, ) / 360f * length;
       newStart += currentPathStrokeOffset;
       newEnd += currentPathStrokeOffset;
 
@@ -233,8 +233,8 @@ class ShapeLayer extends AnimatableLayer {
   }
 
   @Override public int getAlpha() {
-    Integer shapeAlpha = this.shapeAlpha == null ? 255 : this.shapeAlpha.getValue();
-    Integer transformAlpha = this.transformAlpha == null ? 255 : this.transformAlpha.getValue();
+    Integer shapeAlpha = this.shapeAlpha == null ? 255 : this.shapeAlpha.getValue(, );
+    Integer transformAlpha = this.transformAlpha == null ? 255 : this.transformAlpha.getValue(, );
     int layerAlpha = super.getAlpha();
     return (int) ((shapeAlpha / 255f * transformAlpha / 255f * layerAlpha / 255f) * 255);
   }
@@ -286,7 +286,7 @@ class ShapeLayer extends AnimatableLayer {
   }
 
   private void onLineWidthChanged() {
-    paint.setStrokeWidth(lineWidth.getValue());
+    paint.setStrokeWidth(lineWidth.getValue(, ));
     invalidateSelf();
   }
 
@@ -321,12 +321,12 @@ class ShapeLayer extends AnimatableLayer {
   private void onDashPatternChanged() {
     float[] values = new float[lineDashPattern.size()];
     for (int i = 0; i < lineDashPattern.size(); i++) {
-      values[i] = lineDashPattern.get(i).getValue();
+      values[i] = lineDashPattern.get(i).getValue(, );
       if (values[i] == 0) {
         values[i] = 0.01f;
       }
     }
-    paint.setPathEffect(new DashPathEffect(values, lineDashPatternOffset.getValue()));
+    paint.setPathEffect(new DashPathEffect(values, lineDashPatternOffset.getValue(, )));
     invalidateSelf();
   }
 
